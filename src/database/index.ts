@@ -24,7 +24,17 @@ export async function initDB() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
-    
+
+    -- idempotency tracking
+    CREATE TABLE IF NOT EXISTS notification_sends (
+      id SERIAL PRIMARY KEY,
+      notification_id VARCHAR(255) NOT NULL,
+      channel VARCHAR(50) NOT NULL,
+      provider_id VARCHAR(255) NOT NULL,
+      sent_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(notification_id, channel)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_status ON notifications(status);
     CREATE INDEX IF NOT EXISTS idx_created_at ON notifications(created_at);
   `);
