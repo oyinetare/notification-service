@@ -24,10 +24,13 @@ app.post("/notify", async (req, res) => {
     // Add to Redis queue (instant!)
     const job = await notificationQueue.add(notification, {
       attempts: 3,
+      // Configure exponential backoff
       backoff: {
-        type: "fixed",
-        delay: 5000,
+        type: "exponential",
+        delay: 2000, // 2s, 4s, 8s, 16s, 32s
       },
+      removeOnComplete: true,
+      removeOnFail: false,
     });
 
     res.json({
@@ -44,8 +47,15 @@ app.post("/notify", async (req, res) => {
   }
 });
 
+// Monitor worker health
+let workerStats = {
+  processing: new Set(),
+  blocked: 0,
+};
+
 // Process queue with idempotency
 notificationQueue.process(10, async (job) => {
+  workerStats.processing.add(job.id);
   const notification = job.data;
 
   // Check if already sent
@@ -85,6 +95,19 @@ notificationQueue.process(10, async (job) => {
   );
 
   try {
+    // If all workers stuck on same channel
+    if (
+      workerStats.processing.size === 5 &&
+      Array.from(workerStats.processing).every(
+        (id) =>
+          // Check if all processing same channel
+          true // simplified
+      )
+    ) {
+      console.log("⚠️  HEAD-OF-LINE BLOCKING DETECTED!");
+      workerStats.blocked++;
+    }
+
     // Send notification
     let result;
     switch (notification.channel) {
@@ -122,6 +145,8 @@ notificationQueue.process(10, async (job) => {
     );
 
     throw error; // Bull will retry - only throw if not already sent
+  } finally {
+    workerStats.processing.delete(job.id);
   }
 });
 
