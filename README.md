@@ -47,5 +47,11 @@ client <----api----> server <----pool----> postgreSQL database
   - proboem is some duplicate sends as the queue retries, solve w idempotency
 
 - [x] **4 - idempotency & deduplication**
+
   - Learning Objective: Implement idempotency to prevent duplicate sends
   - add new table for idempotency tracking and just check befroe processing notification
+
+- [ ] **5 - resilience patterns**
+  - retry w exponential-backoff: smart retries, but watch for head-of-line blocking
+  - multi-channel failover: implement channel failover without sending duplicates
+  - circuit-breakers: stop hammering dead providers, implement circuit breakers

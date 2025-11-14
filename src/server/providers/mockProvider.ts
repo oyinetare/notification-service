@@ -1,6 +1,9 @@
-import { Notification, NotificationResult } from "../types";
+import { Notification, NotificationResult } from "../../types";
+import { CircuitBreaker } from "../circuit-breaker";
 
 export class MockProvider {
+  private circuitBreaker = new CircuitBreaker();
+
   async send(
     channel: Notification["channel"],
     failureRate: number,

@@ -13,3 +13,21 @@ export interface NotificationResult {
   error?: string;
   timestamp: Date;
 }
+
+export interface UserPreferences {
+  userId: string;
+  channels: {
+    primary: Notification["channel"];
+    fallback: Notification["channel"][];
+  };
+  limits: {
+    // per diem
+    sms: number;
+    email: number;
+  };
+}
+
+export interface FailoverNotification extends Notification {
+  attemptedChannels?: string[];
+  originalChannel?: string;
+}
