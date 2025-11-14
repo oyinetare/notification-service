@@ -44,9 +44,24 @@ app.post("/notify", async (req, res) => {
   }
 });
 
-// Process queue
+// Process queue with idempotency
 notificationQueue.process(10, async (job) => {
   const notification = job.data;
+
+  // Check if already sent
+  const existing = await pool.query(
+    "SELECT * FROM notification_sends WHERE notification_id = $1 AND channel = $2",
+    [notification.id, notification.channel]
+  );
+
+  if (existing.rows.length > 0) {
+    console.log(`Already sent ${notification.id} - skipping`);
+    return {
+      status: "already_sent",
+      providerId: existing.rows[0].provider_id,
+    };
+  }
+
   console.log(
     `Processing ${notification.id} (attempt ${job.attemptsMade + 1})`
   );
@@ -92,6 +107,12 @@ notificationQueue.process(10, async (job) => {
       ["sent", notification.id]
     );
 
+    // Record successful send
+    await pool.query(
+      "INSERT INTO notification_sends (notification_id, channel, provider_id) VALUES ($1, $2, $3)",
+      [notification.id, notification.channel, result.id]
+    );
+
     return result;
   } catch (error: any) {
     // Update failure status
@@ -100,7 +121,7 @@ notificationQueue.process(10, async (job) => {
       ["failed", error.message, notification.id]
     );
 
-    throw error; // Bull will retry
+    throw error; // Bull will retry - only throw if not already sent
   }
 });
 
