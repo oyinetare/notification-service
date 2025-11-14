@@ -1,4 +1,4 @@
-import { Notification, NotificationResult } from "./types";
+import { Notification, NotificationResult } from "../types";
 
 export class MockProvider {
   async send(
